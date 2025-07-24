@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Progress Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .task-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(0);
+        }
+        
+        .task-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .priority-low {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        }
+        
+        .priority-medium {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+        
+        .priority-high {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        }
+        
+        .progress-ring {
+            width: 120px;
+            height: 120px;
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
+        .progress-ring-progress {
+            fill: none;
+            stroke: #fff;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 314;
+            stroke-dashoffset: 314;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.5; }
+            50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
+        }
+        
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+        
+        .priority-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .priority-low-indicator {
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+        }
+        
+        .priority-medium-indicator {
+            background: #f59e0b;
+            box-shadow: 0 0 10px #f59e0b;
+        }
+        
+        .priority-high-indicator {
+            background: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+        }
+        
+        .stats-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            transition: all 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .three-scene {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            opacity: 0.6;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 107, 107, 0.4);
+        }
+        
+        .task-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+        
+        .task-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .task-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+        
+        .completion-celebration {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            pointer-events: none;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ff6b6b;
+            animation: confetti-fall 3s ease-in-out;
+        }
+        
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Three.js Background Scene -->
+    <div id="three-scene" class="three-scene"></div>
+    
+    <!-- Floating Particles -->
+    <div class="floating-particles" id="particles"></div>
+    
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
+    
+    <!-- Completion Celebration -->
+    <div id="celebration" class="completion-celebration"></div>
+    
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-8 relative z-10">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-6xl font-bold text-white mb-4 pulse">
+                ✨ Progress Tracker Pro ✨
+            </h1>
+            <p class="text-xl text-white opacity-90 font-light">
+                Manage your tasks with style and precision
+            </p>
+        </div>
+        
+        <!-- Statistics Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="stats-card rounded-xl p-6 text-center text-white">
+                <div class="text-3xl font-bold mb-2" id="total-tasks">0</div>
+                <div class="text-sm opacity-80">Total Tasks</div>
+            </div>
+            <div class="stats-card rounded-xl p-6 text-center text-white">
+                <div class="text-3xl font-bold mb-2 text-green-300" id="completed-tasks">0</div>
+                <div class="text-sm opacity-80">Completed</div>
+            </div>
+            <div class="stats-card rounded-xl p-6 text-center text-white">
+                <div class="text-3xl font-bold mb-2 text-red-300" id="high-priority-tasks">0</div>
+                <div class="text-sm opacity-80">High Priority</div>
+            </div>
+            <div class="stats-card rounded-xl p-6 text-center text-white">
+                <div class="text-3xl font-bold mb-2 text-blue-300" id="completion-rate">0%</div>
+                <div class="text-sm opacity-80">Completion Rate</div>
+            </div>
+        </div>
+        
+        <!-- Progress Ring -->
+        <div class="flex justify-center mb-8">
+            <div class="glass-effect rounded-full p-8">
+                <svg class="progress-ring">
+                    <circle class="progress-ring-circle" cx="60" cy="60" r="50"></circle>
+                    <circle class="progress-ring-progress" cx="60" cy="60" r="50" id="progress-circle"></circle>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-white" id="progress-percentage">0%</div>
+                        <div class="text-sm text-white opacity-80">Complete</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Task Input Form -->
+        <div class="glass-effect rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">Add New Task</h2>
+            <form id="task-form" class="space-y-4">
+                <div>
+                    <input type="text" id="task-input" placeholder="Enter your task..." 
+                           class="task-input w-full px-4 py-3 rounded-lg font-medium" required>
+                </div>
+                <div>
+                    <textarea id="task-description" placeholder="Task description (optional)..." 
+                              class="task-input w-full px-4 py-3 rounded-lg font-medium h-24 resize-none"></textarea>
+                </div>
+                <div class="flex gap-4">
+                    <select id="task-priority" class="task-input flex-1 px-4 py-3 rounded-lg font-medium">
+                        <option value="low">🟢 Low Priority</option>
+                        <option value="medium">🟡 Medium Priority</option>
+                        <option value="high">🔴 High Priority</option>
+                    </select>
+                    <button type="submit" class="btn-primary px-8 py-3 rounded-lg font-semibold text-white">
+                        ✨ Add Task
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Task Filters -->
+        <div class="flex justify-center mb-8">
+            <div class="glass-effect rounded-full p-2">
+                <div class="flex gap-2">
+                    <button class="filter-btn active px-6 py-2 rounded-full text-white font-medium transition-all" data-filter="all">
+                        All Tasks
+                    </button>
+                    <button class="filter-btn px-6 py-2 rounded-full text-white font-medium transition-all" data-filter="low">
+                        Low Priority
+                    </button>
+                    <button class="filter-btn px-6 py-2 rounded-full text-white font-medium transition-all" data-filter="medium">
+                        Medium Priority
+                    </button>
+                    <button class="filter-btn px-6 py-2 rounded-full text-white font-medium transition-all" data-filter="high">
+                        High Priority
+                    </button>
+                    <button class="filter-btn px-6 py-2 rounded-full text-white font-medium transition-all" data-filter="completed">
+                        Completed
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tasks Container -->
+        <div id="tasks-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Tasks will be dynamically added here -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-16">
+            <div class="text-6xl mb-4">📝</div>
+            <h3 class="text-2xl font-bold text-white mb-2">No tasks yet!</h3>
+            <p class="text-white opacity-80">Add your first task to get started on your journey to productivity.</p>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let tasks = [];
+        let taskIdCounter = 1;
+        let scene, camera, renderer, particles;
+        let currentFilter = 'all';
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initThreeJS();
+            initParticles();
+            initEventListeners();
+            updateStats();
+            updateEmptyState();
+            createFloatingParticles();
+        });
+        
+        // Three.js Background Scene
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('three-scene').appendChild(renderer.domElement);
+            
+            // Create animated background geometry
+            const geometry = new THREE.IcosahedronGeometry(1, 1);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x667eea,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.1
+            });
+            
+            // Create multiple floating shapes
+            for (let i = 0; i < 20; i++) {
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 20
+                );
+                mesh.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                scene.add(mesh);
+            }
+            
+            camera.position.z = 5;
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                scene.children.forEach((child, index) => {
+                    if (child instanceof THREE.Mesh) {
+                        child.rotation.x += 0.005;
+                        child.rotation.y += 0.005;
+                        child.position.y += Math.sin(Date.now() * 0.001 + index) * 0.001;
+                    }
+                });
+                
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+        
+        // Initialize floating particles
+        function initParticles() {
+            const particleGeometry = new THREE.BufferGeometry();
+            const particleCount = 100;
+            const positions = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 50;
+            }
+            
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            particles = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particles);
+        }
+        
+        // Create HTML floating particles
+        function createFloatingParticles() {
+            const particlesContainer = document.getElementById('particles');
+            
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        // Initialize event listeners
+        function initEventListeners() {
+            document.getElementById('task-form').addEventListener('submit', addTask);
+            
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentFilter = this.dataset.filter;
+                    filterTasks();
+                });
+            });
+            
+            // Window resize handler
+            window.addEventListener('resize', function() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        // Add new task
+        function addTask(e) {
+            e.preventDefault();
+            
+            const taskInput = document.getElementById('task-input');
+            const taskDescription = document.getElementById('task-description');
+            const taskPriority = document.getElementById('task-priority');
+            
+            if (taskInput.value.trim() === '') return;
+            
+            const task = {
+                id: taskIdCounter++,
+                title: taskInput.value.trim(),
+                description: taskDescription.value.trim(),
+                priority: taskPriority.value,
+                completed: false,
+                createdAt: new Date().toISOString()
+            };
+            
+            tasks.push(task);
+            
+            // Clear form
+            taskInput.value = '';
+            taskDescription.value = '';
+            taskPriority.value = 'low';
+            
+            // Show notification
+            showNotification('Task added successfully! 🎉', 'success');
+            
+            // Update UI
+            renderTasks();
+            updateStats();
+            updateEmptyState();
+            updateProgressRing();
+        }
+        
+        // Remove task
+        function removeTask(taskId) {
+            const taskIndex = tasks.findIndex(task => task.id === taskId);
+            if (taskIndex !== -1) {
+                const task = tasks[taskIndex];
+                tasks.splice(taskIndex, 1);
+                
+                showNotification(`Task "${task.title}" removed! 🗑️`, 'info');
+                
+                renderTasks();
+                updateStats();
+                updateEmptyState();
+                updateProgressRing();
+            }
+        }
+        
+        // Toggle task completion
+        function toggleTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.completed = !task.completed;
+                
+                if (task.completed) {
+                    showNotification(`Task "${task.title}" completed! ✅`, 'success');
+                    createCelebration();
+                } else {
+                    showNotification(`Task "${task.title}" marked as incomplete! ↩️`, 'info');
+                }
+                
+                renderTasks();
+                updateStats();
+                updateProgressRing();
+            }
+        }
+        
+        // Create celebration effect
+        function createCelebration() {
+            const celebration = document.getElementById('celebration');
+            celebration.innerHTML = '';
+            
+            for (let i = 0; i < 20; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = (Math.random() * 100 - 50) + 'px';
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                celebration.appendChild(confetti);
+            }
+            
+            setTimeout(() => {
+                celebration.innerHTML = '';
+            }, 3000);
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification glass-effect rounded-lg p-4 mb-4 text-white font-medium ${type === 'success' ? 'border-green-400' : type === 'error' ? 'border-red-400' : 'border-blue-400'}`;
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white opacity-60 hover:opacity-100">
+                        ✕
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('notification-container').appendChild(notification);
+            
+            // Show notification
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        }
+        
+        // Render tasks
+        function renderTasks() {
+            const container = document.getElementById('tasks-container');
+            container.innerHTML = '';
+            
+            const filteredTasks = filterTasksByType();
+            
+            filteredTasks.forEach(task => {
+                const taskCard = createTaskCard(task);
+                container.appendChild(taskCard);
+            });
+        }
+        
+        // Create task card
+        function createTaskCard(task) {
+            const card = document.createElement('div');
+            card.className = `task-card glass-effect rounded-xl p-6 relative fade-in ${task.priority === 'low' ? 'border-green-400' : task.priority === 'medium' ? 'border-yellow-400' : 'border-red-400'} border-l-4`;
+            
+            const priorityColors = {
+                low: 'bg-green-400',
+                medium: 'bg-yellow-400',
+                high: 'bg-red-400'
+            };
+            
+            card.innerHTML = `
+                <div class="priority-indicator ${task.priority}-priority-indicator"></div>
+                <div class="mb-4">
+                    <h3 class="text-xl font-bold text-white mb-2 ${task.completed ? 'line-through opacity-60' : ''}">
+                        ${task.title}
+                    </h3>
+                    ${task.description ? `<p class="text-white opacity-80 text-sm ${task.completed ? 'line-through opacity-40' : ''}">${task.description}</p>` : ''}
+                </div>
+                
+                <div class="flex items-center justify-between mb-4">
+                    <span class="px-3 py-1 rounded-full text-xs font-medium text-white ${priorityColors[task.priority]}">
+                        ${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority
+                    </span>
+                    <span class="text-xs text-white opacity-60">
+                        ${new Date(task.createdAt).toLocaleDateString()}
+                    </span>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="toggleTask(${task.id})" 
+                            class="flex-1 px-4 py-2 rounded-lg font-medium transition-all ${task.completed ? 'bg-gray-600 text-white' : 'btn-primary text-white'}">
+                        ${task.completed ? '↩️ Undo' : '✅ Complete'}
+                    </button>
+                    <button onclick="removeTask(${task.id})" 
+                            class="btn-danger px-4 py-2 rounded-lg text-white font-medium">
+                        🗑️
+                    </button>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        // Filter tasks by type
+        function filterTasksByType() {
+            switch (currentFilter) {
+                case 'low':
+                    return tasks.filter(task => task.priority === 'low' && !task.completed);
+                case 'medium':
+                    return tasks.filter(task => task.priority === 'medium' && !task.completed);
+                case 'high':
+                    return tasks.filter(task => task.priority === 'high' && !task.completed);
+                case 'completed':
+                    return tasks.filter(task => task.completed);
+                default:
+                    return tasks;
+            }
+        }
+        
+        // Filter tasks
+        function filterTasks() {
+            renderTasks();
+            updateEmptyState();
+            showNotification(`Showing ${currentFilter} tasks! 🔍`, 'info');
+        }
+        
+        // Update statistics
+        function updateStats() {
+            const totalTasks = tasks.length;
+            const completedTasks = tasks.filter(task => task.completed).length;
+            const highPriorityTasks = tasks.filter(task => task.priority === 'high' && !task.completed).length;
+            const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            
+            document.getElementById('total-tasks').textContent = totalTasks;
+            document.getElementById('completed-tasks').textContent = completedTasks;
+            document.getElementById('high-priority-tasks').textContent = highPriorityTasks;
+            document.getElementById('completion-rate').textContent = completionRate + '%';
+        }
+        
+        // Update progress ring
+        function updateProgressRing() {
+            const totalTasks = tasks.length;
+            const completedTasks = tasks.filter(task => task.completed).length;
+            const percentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+            
+            const circle = document.getElementById('progress-circle');
+            const circumference = 2 * Math.PI * 50;
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            circle.style.strokeDashoffset = offset;
+            document.getElementById('progress-percentage').textContent = Math.round(percentage) + '%';
+        }
+        
+        // Update empty state
+        function updateEmptyState() {
+            const emptyState = document.getElementById('empty-state');
+            const tasksContainer = document.getElementById('tasks-container');
+            
+            if (tasks.length === 0) {
+                emptyState.style.display = 'block';
+                tasksContainer.style.display = 'none';
+            } else {
+                emptyState.style.display = 'none';
+                tasksContainer.style.display = 'grid';
+            }
+        }
+        
+        // Add some sample tasks for demonstration
+        function addSampleTasks() {
+            const sampleTasks = [
+                { title: 'Complete project documentation', description: 'Write comprehensive documentation for the new feature', priority: 'high' },
+                { title: 'Review code changes', description: 'Review pull requests from team members', priority: 'medium' },
+                { title: 'Update dependencies', description: 'Update all npm packages to latest versions', priority: 'low' }
+            ];
+            
+            sampleTasks.forEach(task => {
+                tasks.push({
+                    id: taskIdCounter++,
+                    title: task.title,
+                    description: task.description,
+                    priority: task.priority,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                });
+            });
+            
+            renderTasks();
+            updateStats();
+            updateEmptyState();
+            updateProgressRing();
+        }
+        
+        // Uncomment the line below to add sample tasks for demonstration
+        // addSampleTasks();
+    </script>
+</body>
+</html>
