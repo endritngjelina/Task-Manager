@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Progress Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.1);
+        }
+        
+        .task-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .task-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .low-priority {
+            border-left-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+        }
+        
+        .medium-priority {
+            border-left-color: #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+        }
+        
+        .high-priority {
+            border-left-color: #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+        }
+        
+        .floating-action-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .floating-action-btn:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.6);
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+        }
+        
+        .priority-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .low-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: #047857;
+        }
+        
+        .medium-badge {
+            background: rgba(245, 158, 11, 0.2);
+            color: #92400e;
+        }
+        
+        .high-badge {
+            background: rgba(239, 68, 68, 0.2);
+            color: #991b1b;
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        
+        .task-complete {
+            opacity: 0.7;
+            transform: scale(0.98);
+        }
+        
+        .task-complete .task-title {
+            text-decoration: line-through;
+            color: #6b7280;
+        }
+        
+        .animate-slide-up {
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-pulse-slow {
+            animation: pulse 3s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .stats-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        #three-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .search-bar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .search-bar:focus {
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .sort-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .sort-btn:hover, .sort-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div id="three-container"></div>
+    
+    <!-- Header -->
+    <div class="relative z-10 p-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-5xl font-bold text-white mb-4 gradient-text animate-pulse-slow">
+                    <i class="fas fa-rocket mr-4"></i>Progress Tracker Pro
+                </h1>
+                <p class="text-white/80 text-lg font-medium">Master your productivity with style</p>
+            </div>
+            
+            <!-- Stats Dashboard -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="stats-card p-6 text-center">
+                    <div class="text-3xl font-bold text-white mb-2" id="total-tasks">0</div>
+                    <div class="text-white/70 font-medium">Total Tasks</div>
+                </div>
+                <div class="stats-card p-6 text-center">
+                    <div class="text-3xl font-bold text-green-300 mb-2" id="completed-tasks">0</div>
+                    <div class="text-white/70 font-medium">Completed</div>
+                </div>
+                <div class="stats-card p-6 text-center">
+                    <div class="text-3xl font-bold text-red-300 mb-2" id="high-priority-tasks">0</div>
+                    <div class="text-white/70 font-medium">High Priority</div>
+                </div>
+                <div class="stats-card p-6 text-center">
+                    <div class="text-3xl font-bold text-blue-300 mb-2" id="completion-rate">0%</div>
+                    <div class="text-white/70 font-medium">Completion Rate</div>
+                </div>
+            </div>
+            
+            <!-- Controls -->
+            <div class="glass-card p-6 mb-8">
+                <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="flex-1 max-w-md">
+                        <input type="text" id="search-input" placeholder="Search tasks..." 
+                               class="search-bar w-full px-6 py-3 outline-none text-gray-800 font-medium">
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="sort-btn px-4 py-2 font-medium active" data-sort="all">All</button>
+                        <button class="sort-btn px-4 py-2 font-medium" data-sort="low">Low</button>
+                        <button class="sort-btn px-4 py-2 font-medium" data-sort="medium">Medium</button>
+                        <button class="sort-btn px-4 py-2 font-medium" data-sort="high">High</button>
+                        <button class="sort-btn px-4 py-2 font-medium" data-sort="completed">Completed</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tasks Container -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tasks-container">
+                <!-- Tasks will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Floating Action Button -->
+    <button class="floating-action-btn" onclick="openModal()">
+        <i class="fas fa-plus"></i>
+    </button>
+    
+    <!-- Modal -->
+    <div id="task-modal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal()"></div>
+        <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+            <div class="glass-card p-8 w-full max-w-md animate-slide-up">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-white">
+                        <i class="fas fa-tasks mr-3"></i>New Task
+                    </h2>
+                    <button onclick="closeModal()" class="text-white/70 hover:text-white text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="task-form" class="space-y-6">
+                    <div>
+                        <label class="block text-white font-semibold mb-2">Task Title</label>
+                        <input type="text" id="task-title" required
+                               class="w-full px-4 py-3 rounded-lg bg-white/90 backdrop-blur border border-white/30 outline-none focus:bg-white transition-all text-gray-800">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-semibold mb-2">Description</label>
+                        <textarea id="task-description" rows="3"
+                                  class="w-full px-4 py-3 rounded-lg bg-white/90 backdrop-blur border border-white/30 outline-none focus:bg-white transition-all text-gray-800"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-semibold mb-2">Priority Level</label>
+                        <select id="task-priority" required
+                                class="w-full px-4 py-3 rounded-lg bg-white/90 backdrop-blur border border-white/30 outline-none focus:bg-white transition-all text-gray-800">
+                            <option value="low">🟢 Low Priority</option>
+                            <option value="medium">🟡 Medium Priority</option>
+                            <option value="high">🔴 High Priority</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-semibold mb-2">Due Date</label>
+                        <input type="date" id="task-date"
+                               class="w-full px-4 py-3 rounded-lg bg-white/90 backdrop-blur border border-white/30 outline-none focus:bg-white transition-all text-gray-800">
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full py-4 bg-gradient-to-r from-green-400 to-blue-500 text-white font-bold rounded-lg hover:from-green-500 hover:to-blue-600 transition-all transform hover:scale-105 shadow-lg">
+                        <i class="fas fa-plus-circle mr-2"></i>Create Task
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let tasks = [];
+        let taskIdCounter = 1;
+        let scene, camera, renderer, particles;
+        
+        // Initialize Three.js background
+        function initThree() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('three-container').appendChild(renderer.domElement);
+            
+            // Create floating particles
+            const geometry = new THREE.BufferGeometry();
+            const particleCount = 100;
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 50;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 50;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
+                
+                colors[i * 3] = Math.random();
+                colors[i * 3 + 1] = Math.random();
+                colors[i * 3 + 2] = Math.random();
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 0.1,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            
+            camera.position.z = 20;
+            animate();
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (particles) {
+                particles.rotation.x += 0.001;
+                particles.rotation.y += 0.002;
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Task management functions
+        function addTask(title, description, priority, dueDate) {
+            const task = {
+                id: taskIdCounter++,
+                title,
+                description,
+                priority,
+                dueDate,
+                completed: false,
+                createdAt: new Date()
+            };
+            
+            tasks.push(task);
+            renderTasks();
+            updateStats();
+            showNotification('Task created successfully!', 'success');
+        }
+        
+        function deleteTask(id) {
+            tasks = tasks.filter(task => task.id !== id);
+            renderTasks();
+            updateStats();
+            showNotification('Task deleted!', 'info');
+        }
+        
+        function toggleTask(id) {
+            const task = tasks.find(task => task.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                renderTasks();
+                updateStats();
+                showNotification(task.completed ? 'Task completed! 🎉' : 'Task reopened!', 'success');
+            }
+        }
+        
+        function renderTasks(filteredTasks = null) {
+            const container = document.getElementById('tasks-container');
+            const tasksToRender = filteredTasks || tasks;
+            
+            if (tasksToRender.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-16">
+                        <div class="text-6xl mb-4">📝</div>
+                        <h3 class="text-2xl font-bold text-white mb-2">No tasks found</h3>
+                        <p class="text-white/70">Create your first task to get started!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = tasksToRender.map(task => `
+                <div class="task-card ${task.priority}-priority ${task.completed ? 'task-complete' : ''} p-6 animate-slide-up">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <button onclick="toggleTask(${task.id})" 
+                                    class="w-6 h-6 rounded-full border-2 ${task.completed ? 'bg-green-500 border-green-500' : 'border-gray-300'} 
+                                           flex items-center justify-center transition-all hover:scale-110">
+                                ${task.completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
+                            </button>
+                            <span class="priority-badge ${task.priority}-badge">${task.priority}</span>
+                        </div>
+                        <button onclick="deleteTask(${task.id})" 
+                                class="text-red-400 hover:text-red-600 transition-colors hover:scale-110">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                    
+                    <h3 class="task-title text-xl font-bold text-gray-800 mb-2">${task.title}</h3>
+                    
+                    ${task.description ? `<p class="text-gray-600 mb-4 leading-relaxed">${task.description}</p>` : ''}
+                    
+                    <div class="flex items-center justify-between text-sm text-gray-500">
+                        <div class="flex items-center space-x-4">
+                            <span><i class="fas fa-calendar-alt mr-1"></i>${task.dueDate || 'No due date'}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8">
+                                <svg class="progress-ring w-full h-full" viewBox="0 0 36 36">
+                                    <path class="progress-ring-circle" stroke="${getPriorityColor(task.priority)}" 
+                                          stroke-width="3" fill="transparent" stroke-dasharray="100, 100"
+                                          stroke-dashoffset="${task.completed ? 0 : 100}"
+                                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function getPriorityColor(priority) {
+            const colors = {
+                low: '#10b981',
+                medium: '#f59e0b',
+                high: '#ef4444'
+            };
+            return colors[priority] || '#6b7280';
+        }
+        
+        function updateStats() {
+            const total = tasks.length;
+            const completed = tasks.filter(task => task.completed).length;
+            const highPriority = tasks.filter(task => task.priority === 'high').length;
+            const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            document.getElementById('total-tasks').textContent = total;
+            document.getElementById('completed-tasks').textContent = completed;
+            document.getElementById('high-priority-tasks').textContent = highPriority;
+            document.getElementById('completion-rate').textContent = `${completionRate}%`;
+        }
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg text-white font-semibold animate-slide-up ${
+                type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        // Modal functions
+        function openModal() {
+            document.getElementById('task-modal').classList.remove('hidden');
+            document.getElementById('task-title').focus();
+        }
+        
+        function closeModal() {
+            document.getElementById('task-modal').classList.add('hidden');
+            document.getElementById('task-form').reset();
+        }
+        
+        // Search and filter functions
+        function setupSearch() {
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = tasks.filter(task => 
+                    task.title.toLowerCase().includes(query) || 
+                    task.description.toLowerCase().includes(query)
+                );
+                renderTasks(filtered);
+            });
+        }
+        
+        function setupFilters() {
+            const sortButtons = document.querySelectorAll('.sort-btn');
+            sortButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    // Update active state
+                    sortButtons.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    const sortType = e.target.dataset.sort;
+                    let filtered = tasks;
+                    
+                    switch(sortType) {
+                        case 'low':
+                            filtered = tasks.filter(task => task.priority === 'low');
+                            break;
+                        case 'medium':
+                            filtered = tasks.filter(task => task.priority === 'medium');
+                            break;
+                        case 'high':
+                            filtered = tasks.filter(task => task.priority === 'high');
+                            break;
+                        case 'completed':
+                            filtered = tasks.filter(task => task.completed);
+                            break;
+                        default:
+                            filtered = tasks;
+                    }
+                    
+                    renderTasks(filtered);
+                });
+            });
+        }
+        
+        // Event listeners
+        document.getElementById('task-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('task-title').value;
+            const description = document.getElementById('task-description').value;
+            const priority = document.getElementById('task-priority').value;
+            const dueDate = document.getElementById('task-date').value;
+            
+            addTask(title, description, priority, dueDate);
+            closeModal();
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                openModal();
+            }
+        });
+        
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+        
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            initThree();
+            setupSearch();
+            setupFilters();
+            renderTasks();
+            updateStats();
+            
+            // Add sample tasks for demonstration
+            setTimeout(() => {
+                addTask("Complete project presentation", "Prepare slides and rehearse the quarterly review presentation", "high", "2025-07-05");
+                addTask("Review code changes", "Go through the pull requests and provide feedback", "medium", "2025-07-02");
+                addTask("Update documentation", "Add new API endpoints to the developer documentation", "low", "2025-07-10");
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
