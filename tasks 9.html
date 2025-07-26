@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Progress Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --text-primary: #2d3748;
+            --text-secondary: #4a5568;
+            --bg-primary: #f7fafc;
+            --bg-secondary: #edf2f7;
+        }
+
+        [data-theme="dark"] {
+            --glass-bg: rgba(0, 0, 0, 0.3);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --text-primary: #f7fafc;
+            --text-secondary: #e2e8f0;
+            --bg-primary: #1a202c;
+            --bg-secondary: #2d3748;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .glass-effect {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px var(--shadow-color);
+        }
+
+        .floating-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-10px) rotate(1deg); }
+            66% { transform: translateY(5px) rotate(-1deg); }
+        }
+
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); }
+            to { box-shadow: 0 0 40px rgba(102, 126, 234, 0.8); }
+        }
+
+        .task-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: center;
+        }
+
+        .task-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px var(--shadow-color);
+        }
+
+        .priority-high {
+            background: var(--danger-gradient);
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .priority-medium {
+            background: var(--warning-gradient);
+            border-left: 5px solid #ffd93d;
+        }
+
+        .priority-low {
+            background: var(--success-gradient);
+            border-left: 5px solid #6bcf7f;
+        }
+
+        .btn-gradient {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-gradient:active {
+            transform: translateY(0);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+            transition: all 0.3s ease;
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .stats-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px var(--shadow-color);
+        }
+
+        .theme-toggle {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: var(--primary-gradient);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        [data-theme="dark"] .theme-toggle::before {
+            transform: translateX(30px);
+        }
+
+        .add-task-form {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px var(--shadow-color);
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 16px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .three-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .completed-task {
+            opacity: 0.7;
+            text-decoration: line-through;
+            background: linear-gradient(135deg, #c3c3c3 0%, #a8a8a8 100%) !important;
+        }
+
+        .delete-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .complete-btn {
+            background: var(--success-gradient);
+            transition: all 0.3s ease;
+        }
+
+        .complete-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(75, 207, 127, 0.4);
+        }
+
+        .header-title {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 5px rgba(102, 126, 234, 0.5)); }
+            to { filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.8)); }
+        }
+
+        .category-filter {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-btn.active {
+            background: var(--primary-gradient);
+            color: white;
+            border-color: transparent;
+            transform: scale(1.05);
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 50px 12px 20px;
+            border: 2px solid var(--glass-border);
+            border-radius: 25px;
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            font-size: 16px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .task-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas class="three-bg" id="threeBg"></canvas>
+    
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="header-title floating-animation">Ultimate Progress Tracker</h1>
+            <div class="theme-toggle" id="themeToggle"></div>
+        </div>
+
+        <!-- Stats Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="stats-card rounded-2xl p-6 text-center">
+                <div class="text-3xl font-bold text-blue-500 mb-2" id="totalTasks">0</div>
+                <div class="text-sm opacity-70">Total Tasks</div>
+            </div>
+            <div class="stats-card rounded-2xl p-6 text-center">
+                <div class="text-3xl font-bold text-green-500 mb-2" id="completedTasks">0</div>
+                <div class="text-sm opacity-70">Completed</div>
+            </div>
+            <div class="stats-card rounded-2xl p-6 text-center">
+                <div class="text-3xl font-bold text-orange-500 mb-2" id="pendingTasks">0</div>
+                <div class="text-sm opacity-70">Pending</div>
+            </div>
+            <div class="stats-card rounded-2xl p-6 text-center">
+                <div class="progress-container">
+                    <svg class="progress-ring" width="60" height="60">
+                        <circle class="progress-ring-circle" stroke="#e2e8f0" stroke-width="4" fill="transparent" r="26" cx="30" cy="30"/>
+                        <circle class="progress-ring-circle" stroke="#667eea" stroke-width="4" fill="transparent" r="26" cx="30" cy="30" id="progressCircle"/>
+                    </svg>
+                    <div class="text-sm opacity-70 mt-2">Progress</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Task Form -->
+        <div class="add-task-form">
+            <h2 class="text-2xl font-bold mb-6 text-center">Create New Task</h2>
+            <form id="taskForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="input-group">
+                    <input type="text" id="taskTitle" placeholder="Task Title" required>
+                </div>
+                <div class="input-group">
+                    <select id="taskPriority" required>
+                        <option value="">Select Priority</option>
+                        <option value="low">Low Priority</option>
+                        <option value="medium">Medium Priority</option>
+                        <option value="high">High Priority</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <button type="submit" class="btn-gradient px-8 py-3 rounded-xl font-semibold w-full">
+                        Add Task ✨
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search tasks...">
+            <div class="search-icon">🔍</div>
+        </div>
+
+        <div class="category-filter">
+            <button class="filter-btn active" data-filter="all">All Tasks</button>
+            <button class="filter-btn" data-filter="high">High Priority</button>
+            <button class="filter-btn" data-filter="medium">Medium Priority</button>
+            <button class="filter-btn" data-filter="low">Low Priority</button>
+            <button class="filter-btn" data-filter="completed">Completed</button>
+            <button class="filter-btn" data-filter="pending">Pending</button>
+        </div>
+
+        <!-- Tasks Grid -->
+        <div class="task-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="tasksContainer">
+            <!-- Tasks will be dynamically added here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-16 opacity-50">
+            <div class="text-6xl mb-4">📝</div>
+            <h3 class="text-2xl font-bold mb-2">No Tasks Yet</h3>
+            <p class="text-lg">Create your first task to get started on your journey to productivity!</p>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <script>
+        class ProgressTracker {
+            constructor() {
+                this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                this.currentFilter = 'all';
+                this.currentTheme = localStorage.getItem('theme') || 'light';
+                this.init();
+            }
+
+            init() {
+                this.setupTheme();
+                this.setupEventListeners();
+                this.setupThreeJS();
+                this.renderTasks();
+                this.updateStats();
+                this.showWelcomeNotification();
+            }
+
+            setupTheme() {
+                document.documentElement.setAttribute('data-theme', this.currentTheme);
+            }
+
+            setupEventListeners() {
+                // Theme toggle
+                document.getElementById('themeToggle').addEventListener('click', () => {
+                    this.toggleTheme();
+                });
+
+                // Task form
+                document.getElementById('taskForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addTask();
+                });
+
+                // Search functionality
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.filterTasks(e.target.value);
+                });
+
+                // Filter buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.setActiveFilter(e.target.dataset.filter);
+                    });
+                });
+            }
+
+            setupThreeJS() {
+                const canvas = document.getElementById('threeBg');
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+                
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+
+                // Create floating particles
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const colors = [];
+
+                for (let i = 0; i < 1000; i++) {
+                    vertices.push(
+                        (Math.random() - 0.5) * 2000,
+                        (Math.random() - 0.5) * 2000,
+                        (Math.random() - 0.5) * 2000
+                    );
+                    
+                    colors.push(
+                        Math.random(),
+                        Math.random() * 0.5 + 0.5,
+                        1
+                    );
+                }
+
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                const material = new THREE.PointsMaterial({
+                    size: 3,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.6
+                });
+
+                const particles = new THREE.Points(geometry, material);
+                scene.add(particles);
+
+                camera.position.z = 1000;
+
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    
+                    particles.rotation.x += 0.001;
+                    particles.rotation.y += 0.002;
+                    
+                    renderer.render(scene, camera);
+                };
+
+                animate();
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            addTask() {
+                const title = document.getElementById('taskTitle').value.trim();
+                const priority = document.getElementById('taskPriority').value;
+
+                if (!title || !priority) {
+                    this.showNotification('Please fill in all fields!', 'error');
+                    return;
+                }
+
+                const task = {
+                    id: Date.now(),
+                    title,
+                    priority,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+
+                this.tasks.push(task);
+                this.saveTasks();
+                this.renderTasks();
+                this.updateStats();
+                
+                // Reset form
+                document.getElementById('taskForm').reset();
+                
+                this.showNotification(`Task "${title}" added successfully!`, 'success');
+            }
+
+            deleteTask(id) {
+                const taskIndex = this.tasks.findIndex(task => task.id === id);
+                if (taskIndex !== -1) {
+                    const taskTitle = this.tasks[taskIndex].title;
+                    this.tasks.splice(taskIndex, 1);
+                    this.saveTasks();
+                    this.renderTasks();
+                    this.updateStats();
+                    this.showNotification(`Task "${taskTitle}" deleted!`, 'info');
+                }
+            }
+
+            toggleTask(id) {
+                const task = this.tasks.find(task => task.id === id);
+                if (task) {
+                    task.completed = !task.completed;
+                    this.saveTasks();
+                    this.renderTasks();
+                    this.updateStats();
+                    
+                    const status = task.completed ? 'completed' : 'reopened';
+                    this.showNotification(`Task "${task.title}" ${status}!`, 'success');
+                }
+            }
+
+            renderTasks() {
+                const container = document.getElementById('tasksContainer');
+                const emptyState = document.getElementById('emptyState');
+                
+                let filteredTasks = this.tasks;
+
+                // Apply current filter
+                if (this.currentFilter !== 'all') {
+                    if (this.currentFilter === 'completed') {
+                        filteredTasks = this.tasks.filter(task => task.completed);
+                    } else if (this.currentFilter === 'pending') {
+                        filteredTasks = this.tasks.filter(task => !task.completed);
+                    } else {
+                        filteredTasks = this.tasks.filter(task => task.priority === this.currentFilter);
+                    }
+                }
+
+                if (filteredTasks.length === 0) {
+                    container.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    return;
+                }
+
+                emptyState.style.display = 'none';
+                
+                container.innerHTML = filteredTasks.map(task => `
+                    <div class="task-card glass-effect rounded-2xl p-6 priority-${task.priority} ${task.completed ? 'completed-task' : ''}">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold text-white">${task.title}</h3>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-white bg-opacity-20 text-white">
+                                ${task.priority.toUpperCase()}
+                            </span>
+                        </div>
+                        <div class="text-sm text-white text-opacity-80 mb-4">
+                            Created: ${new Date(task.createdAt).toLocaleDateString()}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="progressTracker.toggleTask(${task.id})" 
+                                    class="complete-btn px-4 py-2 rounded-lg text-white font-semibold flex-1">
+                                ${task.completed ? '↩️ Reopen' : '✅ Complete'}
+                            </button>
+                            <button onclick="progressTracker.deleteTask(${task.id})" 
+                                    class="delete-btn px-4 py-2 rounded-lg text-white font-semibold">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            filterTasks(searchTerm) {
+                const container = document.getElementById('tasksContainer');
+                const tasks = container.querySelectorAll('.task-card');
+                
+                tasks.forEach(task => {
+                    const title = task.querySelector('h3').textContent.toLowerCase();
+                    const matches = title.includes(searchTerm.toLowerCase());
+                    task.style.display = matches ? 'block' : 'none';
+                });
+            }
+
+            setActiveFilter(filter) {
+                this.currentFilter = filter;
+                
+                // Update active button
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.filter === filter);
+                });
+                
+                this.renderTasks();
+                this.showNotification(`Showing ${filter} tasks`, 'info');
+            }
+
+            updateStats() {
+                const total = this.tasks.length;
+                const completed = this.tasks.filter(task => task.completed).length;
+                const pending = total - completed;
+                const progress = total > 0 ? (completed / total) * 100 : 0;
+
+                document.getElementById('totalTasks').textContent = total;
+                document.getElementById('completedTasks').textContent = completed;
+                document.getElementById('pendingTasks').textContent = pending;
+
+                // Update progress circle
+                const circle = document.getElementById('progressCircle');
+                const circumference = 2 * Math.PI * 26;
+                const offset = circumference - (progress / 100) * circumference;
+                
+                circle.style.strokeDasharray = circumference;
+                circle.style.strokeDashoffset = offset;
+            }
+
+            toggleTheme() {
+                this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', this.currentTheme);
+                localStorage.setItem('theme', this.currentTheme);
+                
+                this.showNotification(`Switched to ${this.currentTheme} theme!`, 'info');
+            }
+
+            showNotification(message, type = 'info') {
+                const container = document.getElementById('notificationContainer');
+                const notification = document.createElement('div');
+                
+                const icons = {
+                    success: '✅',
+                    error: '❌',
+                    info: 'ℹ️',
+                    warning: '⚠️'
+                };
+
+                const colors = {
+                    success: 'from-green-500 to-emerald-500',
+                    error: 'from-red-500 to-pink-500',
+                    info: 'from-blue-500 to-indigo-500',
+                    warning: 'from-yellow-500 to-orange-500'
+                };
+
+                notification.className = `notification glass-effect rounded-2xl p-4 max-w-sm bg-gradient-to-r ${colors[type]}`;
+                notification.innerHTML = `
+                    <div class="flex items-center text-white">
+                        <span class="text-2xl mr-3">${icons[type]}</span>
+                        <span class="font-semibold">${message}</span>
+                    </div>
+                `;
+
+                container.appendChild(notification);
+                
+                // Trigger animation
+                setTimeout(() => notification.classList.add('show'), 100);
+                
+                // Remove notification after 3 seconds
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => container.removeChild(notification), 500);
+                }, 3000);
+            }
+
+            showWelcomeNotification() {
+                setTimeout(() => {
+                    this.showNotification('Welcome to Ultimate Progress Tracker! 🚀', 'success');
+                }, 1000);
+            }
+
+            saveTasks() {
+                localStorage.setItem('tasks', JSON.stringify(this.tasks));
+            }
+        }
+
+        // Initialize the application
+        const progressTracker = new ProgressTracker();
+    </script>
+</body>
+</html>
