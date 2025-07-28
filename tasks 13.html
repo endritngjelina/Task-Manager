@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Progress Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --text-primary: #e94560;
+            --text-secondary: #f5f5f5;
+            --text-muted: #a0a0a0;
+            --border-color: #333;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #334155;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: all 0.3s ease;
+        }
+
+        #three-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 10px rgba(102, 126, 234, 0.5)); }
+            to { filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.8)); }
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .low-priority { color: #4ade80; }
+        .medium-priority { color: #f59e0b; }
+        .high-priority { color: #ef4444; }
+        .completed { color: #06b6d4; }
+
+        .task-form {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 15px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .priority-selector {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .priority-btn {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 15px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .priority-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+        }
+
+        .priority-btn.active.low {
+            background: var(--success-gradient);
+            border-color: #4ade80;
+            color: white;
+        }
+
+        .priority-btn.active.medium {
+            background: var(--warning-gradient);
+            border-color: #f59e0b;
+            color: white;
+        }
+
+        .priority-btn.active.high {
+            background: var(--danger-gradient);
+            border-color: #ef4444;
+            color: white;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .tasks-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .task-column {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+            min-height: 400px;
+        }
+
+        .task-column h3 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            text-align: center;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .task-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .task-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .task-item.low::before { background: #4ade80; }
+        .task-item.medium::before { background: #f59e0b; }
+        .task-item.high::before { background: #ef4444; }
+
+        .task-item:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .task-item.completed {
+            opacity: 0.7;
+            text-decoration: line-through;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .task-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .task-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .task-btn:hover {
+            background: var(--bg-tertiary);
+            transform: scale(1.1);
+        }
+
+        .task-description {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--success-gradient);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: progress-shine 2s infinite;
+        }
+
+        @keyframes progress-shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 1rem 1.5rem;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left: 4px solid #4ade80;
+        }
+
+        .notification.warning {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .notification.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .notification.info {
+            border-left: 4px solid #06b6d4;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tasks-section {
+                grid-template-columns: 1fr;
+            }
+
+            .priority-selector {
+                flex-direction: column;
+            }
+
+            .theme-toggle {
+                position: relative;
+                margin-bottom: 1rem;
+            }
+        }
+
+        .task-item.fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        .task-item.fade-out {
+            animation: fadeOut 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="three-container"></div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="theme-toggle" onclick="toggleTheme()">
+                <span id="theme-icon">🌙</span> <span id="theme-text">Dark Mode</span>
+            </div>
+            <h1>Ultimate Progress Tracker</h1>
+            <p>Organize, prioritize, and conquer your goals with style</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number low-priority" id="low-count">0</div>
+                <div class="stat-label">Low Priority</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number medium-priority" id="medium-count">0</div>
+                <div class="stat-label">Medium Priority</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number high-priority" id="high-count">0</div>
+                <div class="stat-label">High Priority</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number completed" id="completed-count">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+        </div>
+
+        <div class="task-form">
+            <h2>Add New Task</h2>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task-title">Task Title</label>
+                    <input type="text" id="task-title" class="form-control" placeholder="Enter task title..." required>
+                </div>
+                <div class="form-group">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description" class="form-control" rows="3" placeholder="Enter task description..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priority Level</label>
+                    <div class="priority-selector">
+                        <div class="priority-btn" data-priority="low">Low Priority</div>
+                        <div class="priority-btn" data-priority="medium">Medium Priority</div>
+                        <div class="priority-btn active high" data-priority="high">High Priority</div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Add Task</button>
+            </form>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="overall-progress"></div>
+        </div>
+        <p style="text-align: center; margin-top: 1rem; color: var(--text-muted);">
+            Overall Progress: <span id="progress-text">0%</span>
+        </p>
+
+        <div class="tasks-section">
+            <div class="task-column">
+                <h3>📋 To Do</h3>
+                <div id="todo-tasks"></div>
+            </div>
+            <div class="task-column">
+                <h3>⏳ In Progress</h3>
+                <div id="progress-tasks"></div>
+            </div>
+            <div class="task-column">
+                <h3>✅ Completed</h3>
+                <div id="completed-tasks"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Three.js Background Animation
+        let scene, camera, renderer, particles;
+        
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('three-container').appendChild(renderer.domElement);
+
+            // Create particles
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+
+            for (let i = 0; i < 1000; i++) {
+                positions.push((Math.random() - 0.5) * 100);
+                positions.push((Math.random() - 0.5) * 100);
+                positions.push((Math.random() - 0.5) * 100);
+
+                colors.push(Math.random());
+                colors.push(Math.random());
+                colors.push(Math.random());
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            camera.position.z = 50;
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            particles.rotation.x += 0.001;
+            particles.rotation.y += 0.002;
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Task Management System
+        class TaskManager {
+            constructor() {
+                this.tasks = this.loadTasks();
+                this.selectedPriority = 'high';
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.renderTasks();
+                this.updateStats();
+                this.applyTheme();
+            }
+
+            setupEventListeners() {
+                document.getElementById('task-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addTask();
+                });
+
+                document.querySelectorAll('.priority-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.selectPriority(btn.dataset.priority);
+                    });
+                });
+            }
+
+            addTask() {
+                const title = document.getElementById('task-title').value.trim();
+                const description = document.getElementById('task-description').value.trim();
+                
+                if (!title) {
+                    this.showNotification('Please enter a task title', 'error');
+                    return;
+                }
+
+                const task = {
+                    id: Date.now(),
+                    title,
+                    description,
+                    priority: this.selectedPriority,
+                    status: 'todo',
+                    createdAt: new Date().toISOString()
+                };
+
+                this.tasks.push(task);
+                this.saveTasks();
+                this.renderTasks();
+                this.updateStats();
+                this.clearForm();
+                this.showNotification(`Task "${title}" added successfully!`, 'success');
+            }
+
+            removeTask(id) {
+                const taskIndex = this.tasks.findIndex(task => task.id === id);
+                if (taskIndex !== -1) {
+                    const task = this.tasks[taskIndex];
+                    this.tasks.splice(taskIndex, 1);
+                    this.saveTasks();
+                    this.renderTasks();
+                    this.updateStats();
+                    this.showNotification(`Task "${task.title}" removed`, 'info');
+                }
+            }
+
+            updateTaskStatus(id, status) {
+                const task = this.tasks.find(task => task.id === id);
+                if (task) {
+                    const oldStatus = task.status;
+                    task.status = status;
+                    this.saveTasks();
+                    this.renderTasks();
+                    this.updateStats();
+                    
+                    let message = '';
+                    if (status === 'completed') {
+                        message = `Task "${task.title}" completed! 🎉`;
+                    } else if (status === 'progress') {
+                        message = `Task "${task.title}" moved to in progress`;
+                    } else {
+                        message = `Task "${task.title}" moved to todo`;
+                    }
+                    
+                    this.showNotification(message, status === 'completed' ? 'success' : 'info');
+                }
+            }
+
+            selectPriority(priority) {
+                this.selectedPriority = priority;
+                document.querySelectorAll('.priority-btn').forEach(btn => {
+                    btn.classList.remove('active', 'low', 'medium', 'high');
+                    if (btn.dataset.priority === priority) {
+                        btn.classList.add('active', priority);
+                    }
+                });
+            }
+
+            renderTasks() {
+                const todoContainer = document.getElementById('todo-tasks');
+                const progressContainer = document.getElementById('progress-tasks');
+                const completedContainer = document.getElementById('completed-tasks');
+
+                todoContainer.innerHTML = '';
+                progressContainer.innerHTML = '';
+                completedContainer.innerHTML = '';
+
+                if (this.tasks.length === 0) {
+                    this.renderEmptyState(todoContainer, 'No tasks yet', 'Add your first task to get started!');
+                    return;
+                }
+
+                const todoTasks = this.tasks.filter(task => task.status === 'todo');
+                const progressTasks = this.tasks.filter(task => task.status === 'progress');
+                const completedTasks = this.tasks.filter(task => task.status === 'completed');
+
+                if (todoTasks.length === 0) {
+                    this.renderEmptyState(todoContainer, 'No pending tasks', 'Great job staying on top of things!');
+                }
+
+                if (progressTasks.length === 0) {
+                    this.renderEmptyState(progressContainer, 'No tasks in progress', 'Start working on a task to see it here');
+                }
+
+                if (completedTasks.length === 0) {
+                    this.renderEmptyState(completedContainer, 'No completed tasks', 'Complete a task to see your progress!');
+                }
+
+                todoTasks.forEach(task => {
+                    todoContainer.appendChild(this.createTaskElement(task));
+                });
+
+                progressTasks.forEach(task => {
+                    progressContainer.appendChild(this.createTaskElement(task));
+                });
+
+                completedTasks.forEach(task => {
+                    completedContainer.appendChild(this.createTaskElement(task));
+                });
+            }
+
+            createTaskElement(task) {
+                const taskElement = document.createElement('div');
+                taskElement.className = `task-item ${task.priority} ${task.status === 'completed' ? 'completed' : ''} fade-in`;
+                
+                const statusButtons = this.getStatusButtons(task);
+                
+                taskElement.innerHTML = `
+                    <div class="task-header">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-actions">
+                            ${statusButtons}
+                            <button class="task-btn" onclick="taskManager.removeTask(${task.id})" title="Delete Task">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                    ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                    <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+                        Created: ${new Date(task.createdAt).toLocaleDateString()}
+                    </div>
+                `;
+
+                return taskElement;
+            }
+
+            getStatusButtons(task) {
+                let buttons = '';
+                
+                if (task.status === 'todo') {
+                    buttons = `
+                        <button class="task-btn" onclick="taskManager.updateTaskStatus(${task.id}, 'progress')" title="Start Task">
+                            ▶️
+                        </button>
+                        <button class="task-btn" onclick="taskManager.updateTaskStatus(${task.id}, 'completed')" title="Mark Complete">
+                            ✅
+                        </button>
+                    `;
+                } else if (task.status === 'progress') {
+                    buttons = `
+                        <button class="task-btn" onclick="taskManager.updateTaskStatus(${task.id}, 'todo')" title="Move to Todo">
+                            ⏪
+                        </button>
+                        <button class="task-btn" onclick="taskManager.updateTaskStatus(${task.id}, 'completed')" title="Mark Complete">
+                            ✅
+                        </button>
+                    `;
+                } else {
+                    buttons = `
+                        <button class="task-btn" onclick="taskManager.updateTaskStatus(${task.id}, 'todo')" title="Reopen Task">
+                            🔄
+                        </button>
+                    `;
+                }
+                
+                return buttons;
+            }
+
+            renderEmptyState(container, title, message) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        <h4>${title}</h4>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+
+            updateStats() {
+                const stats = {
+                    low: this.tasks.filter(task => task.priority === 'low' && task.status !== 'completed').length,
+                    medium: this.tasks.filter(task => task.priority === 'medium' && task.status !== 'completed').length,
+                    high: this.tasks.filter(task => task.priority === 'high' && task.status !== 'completed').length,
+                    completed: this.tasks.filter(task => task.status === 'completed').length
+                };
+
+                document.getElementById('low-count').textContent = stats.low;
+                document.getElementById('medium-count').textContent = stats.medium;
+                document.getElementById('high-count').textContent = stats.high;
+                document.getElementById('completed-count').textContent = stats.completed;
+
+                // Update progress bar
+                const total = this.tasks.length;
+                const progress = total > 0 ? (stats.completed / total) * 100 : 0;
+                document.getElementById('overall-progress').style.width = `${progress}%`;
+                document.getElementById('progress-text').textContent = `${Math.round(progress)}%`;
+
+                // Animate counters
+                this.animateCounters();
+            }
+
+            animateCounters() {
+                const counters = document.querySelectorAll('.stat-number');
+                counters.forEach(counter => {
+                    const finalValue = parseInt(counter.textContent);
+                    gsap.from(counter, {
+                        textContent: 0,
+                        duration: 1,
+                        ease: "power2.out",
+                        snap: { textContent: 1 },
+                        onUpdate: function() {
+                            counter.textContent = Math.ceil(this.targets()[0].textContent);
+                        }
+                    });
+                });
+            }
+
+            clearForm() {
+                document.getElementById('task-title').value = '';
+                document.getElementById('task-description').value = '';
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `notification ${type}`;
+                notification.classList.add('show');
+
+                // Auto hide after 3 seconds
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+
+                // Add sound effect (optional)
+                this.playNotificationSound(type);
+            }
+
+            playNotificationSound(type) {
+                // Create a simple audio context for notification sounds
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    // Different frequencies for different notification types
+                    const frequencies = {
+                        success: 800,
+                        error: 400,
+                        warning: 600,
+                        info: 500
+                    };
+                    
+                    oscillator.frequency.setValueAtTime(frequencies[type] || 500, audioContext.currentTime);
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                } catch (e) {
+                    // Audio not supported, continue silently
+                }
+            }
+
+            saveTasks() {
+                try {
+                    // Since we can't use localStorage, we'll store in memory
+                    // In a real application, this would persist to localStorage
+                    // localStorage.setItem('progressTrackerTasks', JSON.stringify(this.tasks));
+                    
+                    // For demonstration, we'll use a global variable to simulate persistence
+                    window.taskStorage = this.tasks;
+                } catch (e) {
+                    console.warn('Could not save tasks:', e);
+                }
+            }
+
+            loadTasks() {
+                try {
+                    // Since we can't use localStorage, we'll load from memory
+                    // In a real application, this would load from localStorage
+                    // const saved = localStorage.getItem('progressTrackerTasks');
+                    // return saved ? JSON.parse(saved) : [];
+                    
+                    // For demonstration, we'll use a global variable to simulate persistence
+                    return window.taskStorage || [];
+                } catch (e) {
+                    console.warn('Could not load tasks:', e);
+                    return [];
+                }
+            }
+
+            applyTheme() {
+                const theme = this.loadTheme();
+                document.documentElement.setAttribute('data-theme', theme);
+                this.updateThemeToggle(theme);
+            }
+
+            loadTheme() {
+                // Since we can't use localStorage, we'll use a default
+                // In a real application: return localStorage.getItem('theme') || 'dark';
+                return window.themeStorage || 'dark';
+            }
+
+            saveTheme(theme) {
+                // Since we can't use localStorage, we'll store in memory
+                // In a real application: localStorage.setItem('theme', theme);
+                window.themeStorage = theme;
+            }
+
+            updateThemeToggle(theme) {
+                const icon = document.getElementById('theme-icon');
+                const text = document.getElementById('theme-text');
+                
+                if (theme === 'light') {
+                    icon.textContent = '☀️';
+                    text.textContent = 'Light Mode';
+                } else {
+                    icon.textContent = '🌙';
+                    text.textContent = 'Dark Mode';
+                }
+            }
+        }
+
+        // Theme Toggle Function
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            taskManager.saveTheme(newTheme);
+            taskManager.updateThemeToggle(newTheme);
+            taskManager.showNotification(`Switched to ${newTheme} mode`, 'info');
+            
+            // Animate the theme transition
+            gsap.from('body', {
+                duration: 0.5,
+                scale: 0.95,
+                ease: "power2.out"
+            });
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + Enter to submit form
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('task-form').dispatchEvent(new Event('submit'));
+            }
+            
+            // Ctrl/Cmd + T to toggle theme
+            if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+                e.preventDefault();
+                toggleTheme();
+            }
+            
+            // Escape to clear form
+            if (e.key === 'Escape') {
+                taskManager.clearForm();
+                taskManager.showNotification('Form cleared', 'info');
+            }
+        });
+
+        // Enhanced drag and drop functionality
+        let draggedElement = null;
+
+        document.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('task-item')) {
+                draggedElement = e.target;
+                e.target.style.opacity = '0.5';
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        });
+
+        document.addEventListener('dragend', (e) => {
+            if (e.target.classList.contains('task-item')) {
+                e.target.style.opacity = '1';
+                draggedElement = null;
+            }
+        });
+
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            if (!draggedElement) return;
+            
+            const dropZone = e.target.closest('.task-column');
+            if (!dropZone) return;
+            
+            const taskId = parseInt(draggedElement.querySelector('.task-btn').getAttribute('onclick').match(/\d+/)[0]);
+            let newStatus = 'todo';
+            
+            if (dropZone.querySelector('h3').textContent.includes('In Progress')) {
+                newStatus = 'progress';
+            } else if (dropZone.querySelector('h3').textContent.includes('Completed')) {
+                newStatus = 'completed';
+            }
+            
+            taskManager.updateTaskStatus(taskId, newStatus);
+        });
+
+        // Make task items draggable
+        document.addEventListener('DOMContentLoaded', () => {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1 && node.classList.contains('task-item')) {
+                            node.draggable = true;
+                        }
+                    });
+                });
+            });
+            
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
+
+        // Initialize everything when the page loads
+        let taskManager;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            initThreeJS();
+            taskManager = new TaskManager();
+            
+            // Add some sample tasks for demonstration
+            if (taskManager.tasks.length === 0) {
+                const sampleTasks = [
+                    {
+                        id: 1,
+                        title: 'Welcome to Progress Tracker!',
+                        description: 'This is a sample task to get you started. You can edit, move, or delete this task.',
+                        priority: 'medium',
+                        status: 'todo',
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 2,
+                        title: 'Explore the features',
+                        description: 'Try creating tasks, changing priorities, and moving them between columns.',
+                        priority: 'low',
+                        status: 'progress',
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+                
+                taskManager.tasks = sampleTasks;
+                taskManager.saveTasks();
+                taskManager.renderTasks();
+                taskManager.updateStats();
+            }
+            
+            // Welcome notification
+            setTimeout(() => {
+                taskManager.showNotification('Welcome to Ultimate Progress Tracker! 🚀', 'success');
+            }, 1000);
+        });
+
+        // Add some easter eggs and interactive elements
+        let clickCount = 0;
+        document.querySelector('.header h1').addEventListener('click', () => {
+            clickCount++;
+            if (clickCount === 5) {
+                taskManager.showNotification('🎉 Easter egg found! You\'re a true task master!', 'success');
+                
+                // Add some particle effects
+                gsap.to('.header h1', {
+                    duration: 0.5,
+                    scale: 1.1,
+                    rotation: 360,
+                    ease: "bounce.out",
+                    yoyo: true,
+                    repeat: 1
+                });
+                
+                clickCount = 0;
+            }
+        });
+
+        // Auto-save functionality (simulated)
+        setInterval(() => {
+            if (taskManager && taskManager.tasks.length > 0) {
+                taskManager.saveTasks();
+                // Subtle indication that data is being saved
+                const saveIndicator = document.createElement('div');
+                saveIndicator.textContent = '💾 Saved';
+                saveIndicator.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: var(--glass-bg);
+                    padding: 0.5rem 1rem;
+                    border-radius: 20px;
+                    backdrop-filter: blur(10px);
+                    opacity: 0;
+                    transition: all 0.3s ease;
+                    z-index: 1000;
+                    font-size: 0.8rem;
+                    color: var(--text-muted);
+                `;
+                
+                document.body.appendChild(saveIndicator);
+                
+                gsap.to(saveIndicator, {
+                    opacity: 1,
+                    duration: 0.3,
+                    onComplete: () => {
+                        setTimeout(() => {
+                            gsap.to(saveIndicator, {
+                                opacity: 0,
+                                duration: 0.3,
+                                onComplete: () => saveIndicator.remove()
+                            });
+                        }, 1000);
+                    }
+                });
+            }
+        }, 30000); // Auto-save every 30 seconds
+
+        // Performance monitoring
+        const performanceObserver = new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            entries.forEach((entry) => {
+                if (entry.duration > 100) {
+                    console.warn(`Slow operation detected: ${entry.name} took ${entry.duration}ms`);
+                }
+            });
+        });
+        
+        if (window.PerformanceObserver) {
+            performanceObserver.observe({ entryTypes: ['measure', 'navigation'] });
+        }
+
+        // Add smooth scrolling for better UX
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
