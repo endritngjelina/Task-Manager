@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Progress Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --dark-bg: #0f172a;
+            --dark-card: #1e293b;
+            --dark-border: #334155;
+        }
+        
+        .dark {
+            background: var(--dark-bg);
+            color: white;
+        }
+        
+        .gradient-bg {
+            background: var(--primary-gradient);
+        }
+        
+        .card-shadow {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .dark .card-shadow {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .task-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(0);
+        }
+        
+        .task-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .priority-high {
+            border-left: 4px solid #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(254, 226, 226, 0.1) 100%);
+        }
+        
+        .priority-medium {
+            border-left: 4px solid #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(254, 243, 199, 0.1) 100%);
+        }
+        
+        .priority-low {
+            border-left: 4px solid #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(209, 250, 229, 0.1) 100%);
+        }
+        
+        .dark .priority-high {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(127, 29, 29, 0.1) 100%);
+        }
+        
+        .dark .priority-medium {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(120, 53, 15, 0.1) 100%);
+        }
+        
+        .dark .priority-low {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 78, 59, 0.1) 100%);
+        }
+        
+        .btn-gradient {
+            background: var(--primary-gradient);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .notification {
+            animation: slideInRight 0.5s ease-out;
+        }
+        
+        .notification.fade-out {
+            animation: slideOutRight 0.5s ease-in;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark .glassmorphism {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .progress-ring {
+            transition: stroke-dasharray 0.5s ease-in-out;
+        }
+        
+        .theme-toggle {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-toggle.active {
+            background: var(--primary-gradient);
+        }
+        
+        .theme-toggle::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .theme-toggle.active::before {
+            transform: translateX(30px);
+        }
+        
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .task-input {
+            transition: all 0.3s ease;
+        }
+        
+        .task-input:focus {
+            transform: scale(1.02);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .priority-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .priority-btn {
+            padding: 8px 16px;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .priority-btn.selected {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .priority-btn.high {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .priority-btn.medium {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+        
+        .priority-btn.low {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark .stats-card {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .completed-task {
+            opacity: 0.7;
+            text-decoration: line-through;
+        }
+        
+        .completed-task .task-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 78, 59, 0.05));
+        }
+        
+        .search-container {
+            position: relative;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+        
+        .search-input {
+            padding-left: 40px;
+        }
+    </style>
+</head>
+<body class="min-h-screen transition-colors duration-300">
+    <div class="floating-particles" id="particles"></div>
+    
+    <!-- Header -->
+    <header class="glassmorphism sticky top-0 z-50 p-4 mb-8">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-full gradient-bg flex items-center justify-center">
+                    <i class="fas fa-tasks text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                        Ultimate Progress Tracker
+                    </h1>
+                    <p class="text-sm opacity-70">Organize • Track • Achieve</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div class="theme-toggle" id="themeToggle"></div>
+                <div class="flex items-center space-x-2 text-sm">
+                    <i class="fas fa-sun dark:hidden"></i>
+                    <i class="fas fa-moon hidden dark:block"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 pb-8">
+        <!-- Stats Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="stats-card rounded-xl p-6 text-center fade-in-up">
+                <div class="text-3xl font-bold text-blue-600" id="totalTasks">0</div>
+                <div class="text-sm opacity-70">Total Tasks</div>
+            </div>
+            <div class="stats-card rounded-xl p-6 text-center fade-in-up">
+                <div class="text-3xl font-bold text-green-600" id="completedTasks">0</div>
+                <div class="text-sm opacity-70">Completed</div>
+            </div>
+            <div class="stats-card rounded-xl p-6 text-center fade-in-up">
+                <div class="text-3xl font-bold text-orange-600" id="pendingTasks">0</div>
+                <div class="text-sm opacity-70">Pending</div>
+            </div>
+            <div class="stats-card rounded-xl p-6 text-center fade-in-up">
+                <div class="flex justify-center mb-2">
+                    <svg class="w-16 h-16 transform -rotate-90">
+                        <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="opacity-25"/>
+                        <circle cx="32" cy="32" r="28" stroke="#10b981" stroke-width="4" fill="transparent" 
+                                class="progress-ring" stroke-dasharray="0 175.93" stroke-linecap="round" id="progressRing"/>
+                    </svg>
+                </div>
+                <div class="text-sm opacity-70">Progress</div>
+            </div>
+        </div>
+
+        <!-- Task Input Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl card-shadow p-6 mb-8 fade-in-up">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fas fa-plus-circle mr-2 text-blue-600"></i>
+                Add New Task
+            </h2>
+            
+            <div class="space-y-4">
+                <div class="flex space-x-4">
+                    <input type="text" id="taskInput" placeholder="Enter your task..." 
+                           class="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg task-input bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="addTaskBtn" class="btn-gradient text-white px-6 py-3 rounded-lg font-medium">
+                        <i class="fas fa-plus mr-2"></i>Add Task
+                    </button>
+                </div>
+                
+                <div class="priority-selector">
+                    <span class="text-sm font-medium self-center">Priority:</span>
+                    <button class="priority-btn high selected" data-priority="high">
+                        <i class="fas fa-exclamation-circle mr-1"></i>High
+                    </button>
+                    <button class="priority-btn medium" data-priority="medium">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Medium
+                    </button>
+                    <button class="priority-btn low" data-priority="low">
+                        <i class="fas fa-info-circle mr-1"></i>Low
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl card-shadow p-6 mb-8 fade-in-up">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="search-container flex-1">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="Search tasks..." 
+                           class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg search-input bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex space-x-2">
+                    <button class="filter-btn px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-blue-600 text-white" data-filter="all">
+                        All
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600" data-filter="pending">
+                        Pending
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600" data-filter="completed">
+                        Completed
+                    </button>
+                    <button class="filter-btn px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600" data-filter="high">
+                        High Priority
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks Container -->
+        <div class="space-y-4" id="tasksContainer">
+            <!-- Tasks will be dynamically added here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-16 hidden">
+            <div class="text-6xl mb-4 opacity-50">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">No tasks yet</h3>
+            <p class="text-gray-600 dark:text-gray-400">Add your first task to get started!</p>
+        </div>
+    </div>
+
+    <!-- Notifications Container -->
+    <div id="notifications" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        class ProgressTracker {
+            constructor() {
+                this.tasks = this.loadTasks();
+                this.selectedPriority = 'high';
+                this.currentFilter = 'all';
+                this.searchQuery = '';
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.initializeTheme();
+                this.initializeParticles();
+                this.renderTasks();
+                this.updateStats();
+            }
+
+            initializeElements() {
+                this.taskInput = document.getElementById('taskInput');
+                this.addTaskBtn = document.getElementById('addTaskBtn');
+                this.tasksContainer = document.getElementById('tasksContainer');
+                this.searchInput = document.getElementById('searchInput');
+                this.themeToggle = document.getElementById('themeToggle');
+                this.emptyState = document.getElementById('emptyState');
+                this.notificationsContainer = document.getElementById('notifications');
+            }
+
+            setupEventListeners() {
+                // Add task
+                this.addTaskBtn.addEventListener('click', () => this.addTask());
+                this.taskInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addTask();
+                });
+
+                // Priority selection
+                document.querySelectorAll('.priority-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('selected'));
+                        e.target.classList.add('selected');
+                        this.selectedPriority = e.target.dataset.priority;
+                    });
+                });
+
+                // Search
+                this.searchInput.addEventListener('input', (e) => {
+                    this.searchQuery = e.target.value.toLowerCase();
+                    this.renderTasks();
+                });
+
+                // Filter
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.filter-btn').forEach(b => {
+                            b.classList.remove('bg-blue-600', 'text-white');
+                            b.classList.add('bg-white', 'dark:bg-gray-800');
+                        });
+                        e.target.classList.add('bg-blue-600', 'text-white');
+                        e.target.classList.remove('bg-white', 'dark:bg-gray-800');
+                        
+                        this.currentFilter = e.target.dataset.filter;
+                        this.renderTasks();
+                    });
+                });
+
+                // Theme toggle
+                this.themeToggle.addEventListener('click', () => this.toggleTheme());
+            }
+
+            addTask() {
+                const taskText = this.taskInput.value.trim();
+                if (!taskText) {
+                    this.showNotification('Please enter a task!', 'error');
+                    return;
+                }
+
+                const task = {
+                    id: Date.now(),
+                    text: taskText,
+                    priority: this.selectedPriority,
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    completedAt: null
+                };
+
+                this.tasks.unshift(task);
+                this.saveTasks();
+                this.taskInput.value = '';
+                this.renderTasks();
+                this.updateStats();
+                
+                this.showNotification(`Task added with ${this.selectedPriority} priority!`, 'success');
+            }
+
+            toggleTask(id) {
+                const task = this.tasks.find(t => t.id === id);
+                if (task) {
+                    task.completed = !task.completed;
+                    task.completedAt = task.completed ? new Date().toISOString() : null;
+                    this.saveTasks();
+                    this.renderTasks();
+                    this.updateStats();
+                    
+                    const message = task.completed ? 'Task completed! 🎉' : 'Task marked as pending';
+                    this.showNotification(message, task.completed ? 'success' : 'info');
+                }
+            }
+
+            deleteTask(id) {
+                this.tasks = this.tasks.filter(t => t.id !== id);
+                this.saveTasks();
+                this.renderTasks();
+                this.updateStats();
+                this.showNotification('Task deleted!', 'error');
+            }
+
+            renderTasks() {
+                let filteredTasks = this.tasks;
+
+                // Apply search filter
+                if (this.searchQuery) {
+                    filteredTasks = filteredTasks.filter(task => 
+                        task.text.toLowerCase().includes(this.searchQuery)
+                    );
+                }
+
+                // Apply status/priority filter
+                switch(this.currentFilter) {
+                    case 'pending':
+                        filteredTasks = filteredTasks.filter(task => !task.completed);
+                        break;
+                    case 'completed':
+                        filteredTasks = filteredTasks.filter(task => task.completed);
+                        break;
+                    case 'high':
+                        filteredTasks = filteredTasks.filter(task => task.priority === 'high');
+                        break;
+                }
+
+                if (filteredTasks.length === 0) {
+                    this.tasksContainer.innerHTML = '';
+                    this.emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                this.emptyState.classList.add('hidden');
+                
+                this.tasksContainer.innerHTML = filteredTasks.map(task => `
+                    <div class="task-card bg-white dark:bg-gray-800 rounded-xl p-6 card-shadow priority-${task.priority} ${task.completed ? 'completed-task' : ''} fade-in-up">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4 flex-1">
+                                <button class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                    task.completed 
+                                        ? 'bg-green-500 border-green-500 text-white' 
+                                        : 'border-gray-300 dark:border-gray-600 hover:border-green-500'
+                                }" onclick="tracker.toggleTask(${task.id})">
+                                    ${task.completed ? '<i class="fas fa-check text-xs"></i>' : ''}
+                                </button>
+                                
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <span class="text-lg font-medium ${task.completed ? 'line-through opacity-70' : ''}">${task.text}</span>
+                                        <span class="px-2 py-1 text-xs rounded-full font-medium ${
+                                            task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                        }">
+                                            ${task.priority.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        Created: ${new Date(task.createdAt).toLocaleDateString()}
+                                        ${task.completedAt ? ` • Completed: ${new Date(task.completedAt).toLocaleDateString()}` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button class="ml-4 w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-200 hover:scale-110" 
+                                    onclick="tracker.deleteTask(${task.id})">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            updateStats() {
+                const total = this.tasks.length;
+                const completed = this.tasks.filter(t => t.completed).length;
+                const pending = total - completed;
+                const progress = total > 0 ? (completed / total) * 100 : 0;
+
+                document.getElementById('totalTasks').textContent = total;
+                document.getElementById('completedTasks').textContent = completed;
+                document.getElementById('pendingTasks').textContent = pending;
+
+                // Update progress ring
+                const circumference = 2 * Math.PI * 28;
+                const strokeDasharray = (progress / 100) * circumference;
+                document.getElementById('progressRing').style.strokeDasharray = `${strokeDasharray} ${circumference}`;
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification p-4 rounded-lg text-white font-medium max-w-sm ${
+                    type === 'success' ? 'bg-green-500' :
+                    type === 'error' ? 'bg-red-500' :
+                    type === 'warning' ? 'bg-yellow-500' :
+                    'bg-blue-500'
+                }`;
+                
+                notification.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas ${
+                                type === 'success' ? 'fa-check-circle' :
+                                type === 'error' ? 'fa-times-circle' :
+                                type === 'warning' ? 'fa-exclamation-circle' :
+                                'fa-info-circle'
+                            }"></i>
+                            <span>${message}</span>
+                        </div>
+                        <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+
+                this.notificationsContainer.appendChild(notification);
+
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    if (notification.parentElement) {
+                        notification.classList.add('fade-out');
+                        setTimeout(() => {
+                            if (notification.parentElement) {
+                                notification.remove();
+                            }
+                        }, 500);
+                    }
+                }, 5000);
+            }
+
+            toggleTheme() {
+                const html = document.documentElement;
+                const isDark = html.classList.contains('dark');
+                
+                if (isDark) {
+                    html.classList.remove('dark');
+                    this.themeToggle.classList.remove('active');
+                    // NOTE: Using memory storage instead of localStorage
+                    this.theme = 'light';
+                } else {
+                    html.classList.add('dark');
+                    this.themeToggle.classList.add('active');
+                    this.theme = 'dark';
+                }
+                
+                this.showNotification(`Switched to ${isDark ? 'light' : 'dark'} mode!`, 'info');
+            }
+
+            initializeTheme() {
+                // Default to light theme since we can't use localStorage
+                this.theme = 'light';
+                document.documentElement.classList.remove('dark');
+                this.themeToggle.classList.remove('active');
+            }
+
+            initializeParticles() {
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ alpha: true });
+                
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setClearColor(0x000000, 0);
+                document.getElementById('particles').appendChild(renderer.domElement);
+
+                // Create particles
+                const particlesGeometry = new THREE.BufferGeometry();
+                const particlesCount = 50;
+                const posArray = new Float32Array(particlesCount * 3);
+
+                for (let i = 0; i < particlesCount * 3; i++) {
+                    posArray[i] = (Math.random() - 0.5) * 10;
+                }
+
+                particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+                const particlesMaterial = new THREE.PointsMaterial({
+                    size: 0.02,
+                    color: 0x667eea,
+                    transparent: true,
+                    opacity: 0.6
+                });
+
+                const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+                scene.add(particlesMesh);
+
+                camera.position.z = 3;
+
+                // Animation
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    
+                    particlesMesh.rotation.x += 0.0005;
+                    particlesMesh.rotation.y += 0.0005;
+                    
+                    renderer.render(scene, camera);
+                };
+                animate();
+
+                // Handle resize
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            saveTasks() {
+                // NOTE: Using memory storage instead of localStorage
+                // In a real environment, you would use:
+                // localStorage.setItem('progressTrackerTasks', JSON.stringify(this.tasks));
+                
+                // For demonstration purposes, tasks are stored in memory during the session
+                console.log('Tasks saved to memory:', this.tasks);
+            }
+
+            loadTasks() {
+                // NOTE: Using memory storage instead of localStorage
+                // In a real environment, you would use:
+                // const saved = localStorage.getItem('progressTrackerTasks');
+                // return saved ? JSON.parse(saved) : [];
+                
+                // For demonstration purposes, return empty array
+                return [];
+            }
+        }
+
+        // Initialize the application
+        let tracker;
+        document.addEventListener('DOMContentLoaded', () => {
+            tracker = new ProgressTracker();
+            
+            // Add some sample tasks for demonstration
+            setTimeout(() => {
+                tracker.tasks = [
+                    {
+                        id: 1,
+                        text: "Complete project proposal",
+                        priority: "high",
+                        completed: false,
+                        createdAt: new Date().toISOString(),
+                        completedAt: null
+                    },
+                    {
+                        id: 2,
+                        text: "Review team performance",
+                        priority: "medium",
+                        completed: true,
+                        createdAt: new Date(Date.now() - 86400000).toISOString(),
+                        completedAt: new Date().toISOString()
+                    },
+                    {
+                        id: 3,
+                        text: "Update documentation",
+                        priority: "low",
+                        completed: false,
+                        createdAt: new Date(Date.now() - 172800000).toISOString(),
+                        completedAt: null
+                    }
+                ];
+                tracker.renderTasks();
+                tracker.updateStats();
+            }, 500);
+        });
+
+        // Additional animations and interactions
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add smooth scrolling behavior
+            document.documentElement.style.scrollBehavior = 'smooth';
+            
+            // Add intersection observer for animations
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+            
+            // Observe all animated elements
+            document.querySelectorAll('.fade-in-up').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Ctrl/Cmd + Enter to add task
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    if (tracker && tracker.taskInput.value.trim()) {
+                        tracker.addTask();
+                    }
+                }
+                
+                // Escape to clear input
+                if (e.key === 'Escape') {
+                    if (tracker && tracker.taskInput) {
+                        tracker.taskInput.value = '';
+                        tracker.taskInput.blur();
+                    }
+                }
+                
+                // Ctrl/Cmd + F to focus search
+                if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                    e.preventDefault();
+                    if (tracker && tracker.searchInput) {
+                        tracker.searchInput.focus();
+                    }
+                }
+            });
+            
+            // Add hover effects to cards
+            document.addEventListener('mouseover', (e) => {
+                if (e.target.closest('.task-card')) {
+                    const card = e.target.closest('.task-card');
+                    card.style.transform = 'translateY(-5px) scale(1.02)';
+                }
+            });
+            
+            document.addEventListener('mouseout', (e) => {
+                if (e.target.closest('.task-card')) {
+                    const card = e.target.closest('.task-card');
+                    card.style.transform = 'translateY(0) scale(1)';
+                }
+            });
+            
+            // Add focus indicators
+            document.addEventListener('focusin', (e) => {
+                if (e.target.matches('input, button')) {
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.2)';
+                }
+            });
+            
+            document.addEventListener('focusout', (e) => {
+                if (e.target.matches('input, button')) {
+                    e.target.style.boxShadow = '';
+                }
+            });
+        });
+
+        // Performance optimization
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                // Trigger any resize-dependent updates
+                if (tracker) {
+                    tracker.renderTasks();
+                }
+            }, 250);
+        });
+
+        // Add touch gesture support for mobile
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!touchStartX || !touchStartY) return;
+            
+            const touchEndX = e.touches[0].clientX;
+            const touchEndY = e.touches[0].clientY;
+            
+            const diffX = touchStartX - touchEndX;
+            const diffY = touchStartY - touchEndY;
+            
+            // Swipe detection (horizontal swipe on task cards)
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                const taskCard = e.target.closest('.task-card');
+                if (taskCard) {
+                    if (diffX > 0) {
+                        // Swipe left - could trigger delete
+                        taskCard.style.transform = 'translateX(-20px)';
+                        taskCard.style.opacity = '0.7';
+                    } else {
+                        // Swipe right - could trigger complete
+                        taskCard.style.transform = 'translateX(20px)';
+                        taskCard.style.opacity = '0.7';
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('touchend', (e) => {
+            const taskCard = e.target.closest('.task-card');
+            if (taskCard) {
+                taskCard.style.transform = '';
+                taskCard.style.opacity = '';
+            }
+            
+            touchStartX = 0;
+            touchStartY = 0;
+        });
+
+        // Add service worker for offline functionality (placeholder)
+        if ('serviceWorker' in navigator) {
+            // In a real application, you would register a service worker here
+            console.log('Service Worker support detected');
+        }
+
+        // Add accessibility improvements
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add ARIA labels and roles
+            document.querySelectorAll('button').forEach(button => {
+                if (!button.getAttribute('aria-label') && button.textContent.trim()) {
+                    button.setAttribute('aria-label', button.textContent.trim());
+                }
+            });
+            
+            // Add focus trap for modals (if any)
+            const focusableElements = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    const focusable = Array.from(document.querySelectorAll(focusableElements));
+                    const index = focusable.indexOf(document.activeElement);
+                    
+                    if (e.shiftKey) {
+                        if (index <= 0) {
+                            focusable[focusable.length - 1].focus();
+                            e.preventDefault();
+                        }
+                    } else {
+                        if (index >= focusable.length - 1) {
+                            focusable[0].focus();
+                            e.preventDefault();
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
