@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced To-Do List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .weather-widget {
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .weather-widget.loading {
+            opacity: 0.7;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .input-section input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-section input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 15px 25px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .todo-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .todo-item {
+            background: white;
+            border: 2px solid #f0f0f0;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        .todo-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .todo-item.completed {
+            opacity: 0.7;
+            background: #f8f9fa;
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: #888;
+        }
+
+        .todo-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .todo-date {
+            font-size: 12px;
+            color: #888;
+            margin-left: 10px;
+        }
+
+        .delete-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #ff5252;
+            transform: scale(1.05);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✔ Advanced To-Do List</h1>
+            <div class="weather-widget" id="weather">
+                Loading weather...
+            </div>
+        </div>
+
+        <div class="input-section">
+            <input type="text" id="todoInput" placeholder="Add a new task..." maxlength="100">
+            <button class="btn" onclick="todoManager.addTodo()">Add Task</button>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="active">Active</button>
+            <button class="filter-btn" data-filter="completed">Completed</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="totalCount">0</h3>
+                <p>Total Tasks</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="activeCount">0</h3>
+                <p>Active</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="completedCount">0</h3>
+                <p>Completed</p>
+            </div>
+        </div>
+
+        <div class="todo-list" id="todoList">
+            <div class="empty-state">No tasks yet. Add one above!</div>
+        </div>
+    </div>
+
+    <script>
+        // Advanced To-Do Manager using Closures and Modern JS
+        const todoManager = (() => {
+            // Private variables using closure
+            let todos = [];
+            let currentFilter = 'all';
+            let idCounter = 1;
+
+            // Private methods
+            const saveTodos = () => {
+                try {
+                    // Attempt to use localStorage (works in normal browsers)
+                    localStorage.setItem('todos', JSON.stringify(todos));
+                    console.log('Todos saved to localStorage');
+                } catch (error) {
+                    // Fallback for environments without localStorage
+                    console.log('localStorage not available, using memory only:', todos);
+                }
+            };
+
+            const loadTodos = () => {
+                try {
+                    // Attempt to load from localStorage
+                    const saved = localStorage.getItem('todos');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        idCounter = Math.max(...parsed.map(t => t.id), 0) + 1;
+                        return parsed;
+                    }
+                    return [];
+                } catch (error) {
+                    console.log('localStorage not available, starting fresh');
+                    return [];
+                }
+            };
+
+            // Array methods with destructuring
+            const filterTodos = (filter) => {
+                return todos.filter(todo => {
+                    switch(filter) {
+                        case 'active': return !todo.completed;
+                        case 'completed': return todo.completed;
+                        default: return true;
+                    }
+                });
+            };
+
+            const updateStats = () => {
+                const { total, active, completed } = todos.reduce((acc, todo) => ({
+                    total: acc.total + 1,
+                    active: acc.active + (todo.completed ? 0 : 1),
+                    completed: acc.completed + (todo.completed ? 1 : 0)
+                }), { total: 0, active: 0, completed: 0 });
+
+                document.getElementById('totalCount').textContent = total;
+                document.getElementById('activeCount').textContent = active;
+                document.getElementById('completedCount').textContent = completed;
+            };
+
+            const renderTodos = () => {
+                const todoList = document.getElementById('todoList');
+                const filteredTodos = filterTodos(currentFilter);
+
+                if (filteredTodos.length === 0) {
+                    todoList.innerHTML = '<div class="empty-state">No tasks found for this filter.</div>';
+                    return;
+                }
+
+                // Using template literals and destructuring
+                todoList.innerHTML = filteredTodos
+                    .map(({ id, text, completed, createdAt }) => `
+                        <div class="todo-item ${completed ? 'completed' : ''}">
+                            <input type="checkbox" class="todo-checkbox" 
+                                   ${completed ? 'checked' : ''} 
+                                   onchange="todoManager.toggleTodo(${id})">
+                            <span class="todo-text">${text}</span>
+                            <span class="todo-date">${new Date(createdAt).toLocaleDateString()}</span>
+                            <button class="delete-btn" onclick="todoManager.deleteTodo(${id})">Delete</button>
+                        </div>
+                    `).join('');
+
+                updateStats();
+            };
+
+            // Initialize todos on load
+            todos = loadTodos();
+
+            // Public API
+            return {
+                addTodo() {
+                    const input = document.getElementById('todoInput');
+                    const text = input.value.trim();
+                    
+                    if (!text) return;
+
+                    const newTodo = {
+                        id: idCounter++,
+                        text,
+                        completed: false,
+                        createdAt: new Date().toISOString()
+                    };
+
+                    todos = [newTodo, ...todos]; // Using spread operator
+                    input.value = '';
+                    
+                    saveTodos();
+                    renderTodos();
+                },
+
+                toggleTodo(id) {
+                    todos = todos.map(todo => 
+                        todo.id === id 
+                            ? { ...todo, completed: !todo.completed } // Destructuring and spread
+                            : todo
+                    );
+                    
+                    saveTodos();
+                    renderTodos();
+                },
+
+                deleteTodo(id) {
+                    todos = todos.filter(todo => todo.id !== id);
+                    saveTodos();
+                    renderTodos();
+                },
+
+                setFilter(filter) {
+                    currentFilter = filter;
+                    renderTodos();
+                },
+
+                // Method to get todos (for external use)
+                getTodos: () => [...todos] // Return copy to prevent mutation
+            };
+        })();
+
+        // Weather API integration using Promises and Fetch
+        const weatherManager = {
+            async fetchWeather() {
+                const weatherEl = document.getElementById('weather');
+                
+                try {
+                    weatherEl.textContent = 'Loading weather...';
+                    weatherEl.classList.add('loading');
+
+                    // Using fetch with promise-based error handling
+                    const response = await fetch('https://api.weatherapi.com/v1/current.json?key=demo&q=London&aqi=no');
+                    
+                    if (!response.ok) {
+                        throw new Error(`Weather API error: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    // Destructuring the API response
+                    const {
+                        location: { name, country },
+                        current: { temp_c, condition: { text, icon } }
+                    } = data;
+
+                    weatherEl.innerHTML = `
+                        <strong>${name}, ${country}</strong> - ${temp_c}°C, ${text}
+                    `;
+                    
+                } catch (error) {
+                    console.log('Weather API not available, using mock data');
+                    // Fallback to mock weather data
+                    const mockWeather = {
+                        location: 'New Port Richey, FL',
+                        temp: '28°C',
+                        condition: 'Sunny'
+                    };
+                    
+                    weatherEl.innerHTML = `
+                        <strong>${mockWeather.location}</strong> - ${mockWeather.temp}, ${mockWeather.condition}
+                    `;
+                } finally {
+                    weatherEl.classList.remove('loading');
+                }
+            }
+        };
+
+        // Event listeners using modern JS
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize weather
+            weatherManager.fetchWeather();
+            
+            // Initialize todo list
+            todoManager.setFilter('all');
+            
+            // Filter button handlers using event delegation
+            document.querySelector('.filters').addEventListener('click', (e) => {
+                if (e.target.classList.contains('filter-btn')) {
+                    // Remove active class from all buttons
+                    document.querySelectorAll('.filter-btn').forEach(btn => 
+                        btn.classList.remove('active')
+                    );
+                    
+                    // Add active class to clicked button
+                    e.target.classList.add('active');
+                    
+                    // Update filter
+                    todoManager.setFilter(e.target.dataset.filter);
+                }
+            });
+
+            // Enter key handler for input
+            document.getElementById('todoInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    todoManager.addTodo();
+                }
+            });
+
+            // Refresh weather every 5 minutes
+            setInterval(() => {
+                weatherManager.fetchWeather();
+            }, 300000);
+        });
+
+        // Example of using promises for demo data
+        const loadDemoData = () => {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const demoTasks = [
+                        'Learn Advanced JavaScript concepts',
+                        'Build a weather app with API',
+                        'Practice using closures and promises',
+                        'Master array destructuring'
+                    ];
+                    
+                    demoTasks.forEach(task => {
+                        document.getElementById('todoInput').value = task;
+                        todoManager.addTodo();
+                    });
+                    
+                    resolve('Demo data loaded');
+                }, 500);
+            });
+        };
+
+        // Console helper for testing
+        console.log('To-Do Manager API available:', {
+            addDemo: loadDemoData,
+            getTodos: todoManager.getTodos,
+            refreshWeather: weatherManager.fetchWeather
+        });
+    </script>
+</body>
+</html>
