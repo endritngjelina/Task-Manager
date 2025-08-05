@@ -1,4 +1,3 @@
-# Task-Manager
 # Task Manager – A Vanilla JS Productivity App
 
 This project is a **multi-version task manager** built using pure HTML, CSS, and JavaScript. It focuses on simplicity, clean UI, and practical interactivity — no frameworks, just code that works.
